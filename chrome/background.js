@@ -1,26 +1,24 @@
-chrome.webRequest.onBeforeRequest.addListener(
-  function(details) {
-    const trustedSources = new RegExp(".*duckduckgo.com|.*bing.com|.*google.com")
-    
-    const blockedUrlRegex = new RegExp('.*reddit.com')
+const blockedHosts = ["reddit.com", "old.reddit.com", "i.reddit.com", "preview.redd.it", "v.redd.it"];
+const trustedSources = ["duckduckgo.com", "bing.com", "google.com"];
 
-    const homepageUrlRegex = new RegExp(".*reddit\.com\/?$")
-    
-    const currentUrl = details.url
+chrome.runtime.onInstalled.addListener(() => {
+  blockedHosts.forEach((domain, index) => {
+    let id = index + 1;
 
-    let comingFromValidSource = false
-    
-    if (details.initiator) {
-      const isHomepage = homepageUrlRegex.test(currentUrl)
-      comingFromValidSource = trustedSources.test(details.initiator) && !isHomepage
-    }
-    
-    const shouldBeCancelled = blockedUrlRegex.test(currentUrl) && details.type === 'main_frame'
-    
-    return {
-      cancel: shouldBeCancelled && !comingFromValidSource
-    };
-  },
-  {urls: ["<all_urls>"]},
-  ["blocking", "requestBody", "extraHeaders"]
-);
+    chrome.declarativeNetRequest.updateDynamicRules({
+      addRules: [
+        {
+          id: id,
+          priority: 1,
+          action: { type: "block" },
+          condition: {
+            urlFilter: domain,
+            resourceTypes: ["main_frame"],
+            excludedInitiatorDomains: trustedSources,
+          },
+        },
+      ],
+      removeRuleIds: [id],
+    });
+  });
+});
